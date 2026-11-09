@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>笨猪扑面而来</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000000;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+    (function() {
+        var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext('2d');
+        var words = [];
+        var dpr = window.devicePixelRatio || 1;
+
+        function resize() {
+            dpr = window.devicePixelRatio || 1;
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
+        }
+        resize();
+
+        function W() { return window.innerWidth; }
+        function H() { return window.innerHeight; }
+
+        // 最大120个字，保证所有手机流畅不卡
+        var MAX_WORDS = Math.min(120, Math.floor((W() * H()) / 4000));
+
+        function FlyingWord() {
+            this.reset();
+        }
+
+        FlyingWord.prototype.reset = function() {
+            // 完全随机位置，全屏幕范围内随机生成
+            this.x = (Math.random() - 0.5) * W() * 1.8;
+            this.y = (Math.random() - 0.5) * H() * 1.8;
+            this.z = Math.random() * 1800 + 600;
+            // 速度随机，整体更快
+            this.speed = Math.random() * 10 + 14;
+            // 基础字号
+            this.baseSize = Math.random() * 12 + 16;
+        };
+
+        FlyingWord.prototype.update = function() {
+            this.z -= this.speed;
+            // 飞到近处立即重置到远处随机新位置
+            if (this.z < 15) {
+                this.x = (Math.random() - 0.5) * W() * 1.8;
+                this.y = (Math.random() - 0.5) * H() * 1.8;
+                this.z = Math.random() * 1800 + 800;
+                this.speed = Math.random() * 10 + 14;
+            }
+        };
+
+        FlyingWord.prototype.draw = function() {
+            var scale = 800 / this.z;
+            var x2d = W() / 2 + this.x * scale;
+            var y2d = H() / 2 + this.y * scale;
+            var size = this.baseSize * scale;
+
+            // 透明度变化
+            var alpha;
+            if (this.z > 1200) {
+                alpha = 0.15 + (1800 - this.z) / 3000;
+            } else if (this.z < 80) {
+                alpha = this.z / 80;
+            } else {
+                alpha = 1;
+            }
+
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = '#ffffff';
+            // 优先使用手机系统自带中文字体，兼容性最好
+            ctx.font = 'bold ' + size + 'px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Heiti SC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('笨猪', x2d, y2d);
+        };
+
+        // 初始化文字，初始就分散在整个深度
+        for (var i = 0; i < MAX_WORDS; i++) {
+            var w = new FlyingWord();
+            w.z = Math.random() * 1800;
+            words.push(w);
+        }
+
+        function animate() {
+            // 拖尾更短，用0.5透明度覆盖
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, W(), H());
+
+            // 按深度排序
+            words.sort(function(a, b) {
+                return b.z - a.z;
+            });
+
+            for (var j = 0; j < words.length; j++) {
+                words[j].update();
+                words[j].draw();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // 打开直接播放，不需要任何点击
+        animate();
+
+        // 窗口大小变化时重新适配
+        window.addEventListener('resize', function() {
+            resize();
+            var targetCount = Math.min(120, Math.floor((W() * H()) / 4000));
+            while (words.length < targetCount) {
+                var nw = new FlyingWord();
+                nw.z = Math.random() * 1800;
+                words.push(nw);
+            }
+        });
+    })();
+    </script>
+</body>
+</html>
